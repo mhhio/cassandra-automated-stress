@@ -2,9 +2,9 @@ name: Cassandra Cluster and Stress Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -17,31 +17,44 @@ jobs:
     - name: Set up Docker
       uses: docker-practice/actions-setup-docker@master
     
-    - name: Create Cassandra network
-      run: docker network create cassandra-network
-    
     - name: Start Cassandra cluster
       run: |
-        for i in {1..3}
+        # Start the seed node
+        docker run -d --name cassandra-node-1 \
+          --network cassandra-network \
+          -e CASSANDRA_BROADCAST_ADDRESS=cassandra-node-1 \
+          -e CASSANDRA_SEEDS=cassandra-node-1 \
+          cassandra:latest
+
+        # Wait for the seed node to start
+        sleep 60
+
+        # Start the other nodes
+        for i in {2..3}
         do
-          docker run -d --name cassandra-node-$i --network cassandra-network cassandra:latest
+          docker run -d --name cassandra-node-$i \
+            --network cassandra-network \
+            -e CASSANDRA_BROADCAST_ADDRESS=cassandra-node-$i \
+            -e CASSANDRA_SEEDS=cassandra-node-1 \
+            cassandra:latest
         done
         
-    - name: Wait for Cassandra to start
+    - name: Wait for Cassandra cluster to be ready
       run: |
-        for i in {1..60}
+        for i in {1..120}
         do
-          if docker exec cassandra-node-1 nodetool status | grep "UN"; then
-            echo "Cassandra is up and running"
+          if docker exec cassandra-node-1 nodetool status | grep -q "UN" && \
+             docker exec cassandra-node-1 nodetool status | wc -l | grep -q "5"; then
+            echo "Cassandra cluster is up and running"
             break
           fi
-          echo "Waiting for Cassandra to start..."
+          echo "Waiting for Cassandra cluster to be fully operational..."
           sleep 5
         done
     
     - name: Run stress test
       run: |
-        docker exec cassandra-node-1 cassandra-stress write n=10000000 cassandra-node-1
+        docker exec cassandra-node-1 cassandra-stress write n=10000000 -node cassandra-node-1
     
     - name: Collect test results
       run: |

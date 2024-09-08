@@ -57,14 +57,16 @@ jobs:
     
     - name: Run stress test
       run: |
-        docker exec cassandra-node-1 cassandra-stress write n=10000000 -node cassandra-node-1
+        export epoch=$(date '+%s')
+        mkdir -p results
+        docker exec cassandra-node-1 /opt/cassandra/tools/bin/cassandra-stress write n=1000000 -rate threads=50 -node cassandra-node-1 > result/stress-$epoch.txt
     
-    - name: Collect test results
-      run: |
-        export date=$(date '+%s')
-        mkdir -p results/$date
-        docker cp cassandra-node-1:/var/log/cassandra/system.log results/$date
-        docker cp cassandra-node-1:/var/log/cassandra/stress_test_results.log results/$date
+    # - name: Collect test results
+    #   run: |
+    #     export date=$(date '+%s')
+    #     mkdir -p results/$date
+    #     docker cp cassandra-node-1:/var/log/cassandra/system.log results/$date
+    #     docker cp cassandra-node-1:/var/log/cassandra/stress_test_results.log results/$date
     
     - name: Check for changes and push if necessary
       run: |

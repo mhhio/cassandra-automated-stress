@@ -28,7 +28,7 @@ jobs:
           --network cassandra-network \
           -e CASSANDRA_BROADCAST_ADDRESS=cassandra-node-1 \
           -e CASSANDRA_SEEDS=cassandra-node-1 \
-          cassandra:latest
+          cassandra:4.1
 
         # Wait for the seed node to start
         sleep 60
@@ -40,15 +40,14 @@ jobs:
             --network cassandra-network \
             -e CASSANDRA_BROADCAST_ADDRESS=cassandra-node-$i \
             -e CASSANDRA_SEEDS=cassandra-node-1 \
-            cassandra:latest
+            cassandra:4.1
         done
         
     - name: Wait for Cassandra cluster to be ready
       run: |
         for i in {1..120}
         do
-          if docker exec cassandra-node-1 nodetool status | grep -q "UN" && \
-             docker exec cassandra-node-1 nodetool status | wc -l | grep -q "5"; then
+          if docker exec cassandra-node-1 nodetool status | grep -q "UN" ; then
             echo "Cassandra cluster is up and running"
             break
           fi

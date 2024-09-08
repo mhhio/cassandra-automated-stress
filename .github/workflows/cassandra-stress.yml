@@ -59,7 +59,7 @@ jobs:
       run: |
         export epoch=$(date '+%s')
         mkdir -p results
-        docker exec cassandra-node-1 /opt/cassandra/tools/bin/cassandra-stress write n=1000000 -rate threads=50 -node cassandra-node-1 > result/stress-$epoch.txt
+        docker exec cassandra-node-1 /opt/cassandra/tools/bin/cassandra-stress write n=1000000 -rate threads=50 -node cassandra-node-1 > results/stress-$epoch.txt
     
     # - name: Collect test results
     #   run: |

@@ -16,9 +16,13 @@ jobs:
     
     - name: Set up Docker
       uses: docker-practice/actions-setup-docker@master
+
+    - name: Create Cassandra network
+      run: docker network create cassandra-network
     
     - name: Start Cassandra cluster
       run: |
+        
         # Start the seed node
         docker run -d --name cassandra-node-1 \
           --network cassandra-network \

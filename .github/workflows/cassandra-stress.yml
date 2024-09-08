@@ -1,0 +1,66 @@
+name: Cassandra Cluster and Stress Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  setup_and_test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Docker
+      uses: docker-practice/actions-setup-docker@master
+    
+    - name: Create Cassandra network
+      run: docker network create cassandra-network
+    
+    - name: Start Cassandra cluster
+      run: |
+        for i in {1..3}
+        do
+          docker run -d --name cassandra-node-$i --network cassandra-network cassandra:latest
+        done
+        
+    - name: Wait for Cassandra to start
+      run: |
+        for i in {1..60}
+        do
+          if docker exec cassandra-node-1 nodetool status | grep "UN"; then
+            echo "Cassandra is up and running"
+            break
+          fi
+          echo "Waiting for Cassandra to start..."
+          sleep 5
+        done
+    
+    - name: Run stress test
+      run: |
+        docker exec cassandra-node-1 cassandra-stress write n=10000000 cassandra-node-1
+    
+    - name: Collect test results
+      run: |
+        export date=$(date '+%s')
+        mkdir -p results/$date
+        docker cp cassandra-node-1:/var/log/cassandra/system.log results/$date
+        docker cp cassandra-node-1:/var/log/cassandra/stress_test_results.log results/$date
+    
+    - name: Check for changes and push if necessary
+      run: |
+        if [[ -n $(git status -s) ]]; then
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          git commit -m "Update repository including test results"
+          git push
+          echo "Changes were pushed to the repository."
+        else
+          echo "No changes to commit. Skipping push."
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
